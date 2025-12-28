@@ -38,6 +38,7 @@ const MIN_COLUMN_WIDTH = 60;
 const DEFAULT_COLUMN_WIDTH = 120;
 const ROW_HEIGHT = 40;
 const ACTION_COLUMN_WIDTH = 60;
+const NUMBER_COLUMN_WIDTH = 60; // ширина столбца с номером строки
 
 function snap(v: number) {
   return Math.round(v / GRID_SIZE) * GRID_SIZE;
@@ -339,7 +340,6 @@ export default function App() {
       const newData = { ...prev };
       if (tableKey === "left") {
         newData.leftTable.rows.splice(rowIndex, 1);
-        // Безопасная очистка ref
         leftRowRefs.current[rowIndex] = null;
       } else {
         const table = newData.rightTables.find((t: any) => t.id === tableKey);
@@ -453,11 +453,37 @@ export default function App() {
           <div style={{ background: "#222", padding: "24px", borderRadius: "12px", border: "1px solid #555", minWidth: 300, textAlign: "center" }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: "0 0 16px 0" }}>Удалить строку?</h3>
             <p style={{ margin: "0 0 24px 0", color: "#ccc" }}>В строке есть данные. Удалить безвозвратно?</p>
-            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-              <button onClick={() => performDeleteRow(deleteConfirm.tableKey, deleteConfirm.rowIndex)} style={{ padding: "8px 20px", background: "#c33", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>
+            <div style={{ display: "flex", gap: "16px", justifyContent: "center", marginTop: "8px" }}>
+              <button
+                onClick={() => performDeleteRow(deleteConfirm.tableKey, deleteConfirm.rowIndex)}
+                style={{
+                  padding: "10px 24px",
+                  background: "#c33",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  minWidth: "120px",
+                }}
+              >
                 Да, удалить
               </button>
-              <button onClick={() => setDeleteConfirm(null)} style={{ padding: "8px 20px", background: "#333", color: "#fff", border: "1px solid #555", borderRadius: "6px", cursor: "pointer" }}>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                style={{
+                  padding: "10px 24px",
+                  background: "#333",
+                  color: "#fff",
+                  border: "1px solid #555",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  minWidth: "100px",
+                }}
+              >
                 Отмена
               </button>
             </div>
@@ -465,14 +491,16 @@ export default function App() {
         </div>
       )}
 
+      {/* Левая таблица с нумерацией строк */}
       <table border={1} onMouseDown={e => onMouseDownDrag(e, "left", positions.left)}
         style={{ position: "absolute", left: positions.left.x, top: positions.left.y, borderCollapse: "collapse", background: "#111", cursor: "move", userSelect: "none" }}>
         <thead>
           <tr>
-            <th colSpan={data.leftTable.columns.length + 1} style={headerCellStyle}>{data.leftTable.title}</th>
+            <th colSpan={data.leftTable.columns.length + 2} style={headerCellStyle}>{data.leftTable.title}</th>
           </tr>
           <tr>
             <th style={{ ...headerCellStyle, width: ACTION_COLUMN_WIDTH }}></th>
+            <th style={{ ...headerCellStyle, width: NUMBER_COLUMN_WIDTH, textAlign: "center" }}>№</th>
             {data.leftTable.columns.map((colName: string, colIdx: number) => (
               <th key={colIdx} style={{ ...headerCellStyle, width: columnWidths.left[colIdx] }}>
                 {colName}
@@ -504,7 +532,9 @@ export default function App() {
                   −
                 </button>
               </td>
-
+              <td style={{ ...cellStyle, width: NUMBER_COLUMN_WIDTH, textAlign: "center", fontWeight: "bold" }}>
+                {rowIdx + 1}
+              </td>
               {row.map((cell: string, colIdx: number) => {
                 const cellKey: EditingCell = { table: "left", row: rowIdx, col: colIdx };
                 const isEditing = editing?.table === "left" && editing.row === rowIdx && editing.col === colIdx;
@@ -552,17 +582,19 @@ export default function App() {
                 +
               </button>
             </td>
+            <td style={{ ...cellStyle, width: NUMBER_COLUMN_WIDTH }}></td>
             {data.leftTable.columns.map((_, i) => <td key={i} style={{ border: "none" }} />)}
           </tr>
         </tbody>
       </table>
 
+      {/* Правые таблицы с нумерацией строк */}
       {data.rightTables.map((t: any) => (
         <table key={t.id} border={1} onMouseDown={e => onMouseDownDrag(e, t.id, positions[t.id])}
           style={{ position: "absolute", left: positions[t.id].x, top: positions[t.id].y, borderCollapse: "collapse", background: "#111", cursor: "move", userSelect: "none" }}>
           <thead>
             <tr>
-              <th colSpan={t.columns.length + 1} style={headerCellStyle}>
+              <th colSpan={t.columns.length + 2} style={headerCellStyle}>
                 {t.title}
                 <span data-port="in" ref={el => (rightPortRefs.current[t.id] = el)}
                   onMouseDown={e => startLinking("rightTable", t.id, e)}
@@ -573,6 +605,7 @@ export default function App() {
             </tr>
             <tr>
               <th style={{ ...headerCellStyle, width: ACTION_COLUMN_WIDTH }}></th>
+              <th style={{ ...headerCellStyle, width: NUMBER_COLUMN_WIDTH, textAlign: "center" }}>№</th>
               {t.columns.map((colName: string, colIdx: number) => (
                 <th key={colIdx} style={{ ...headerCellStyle, width: columnWidths[t.id][colIdx] }}>
                   {colName}
@@ -604,7 +637,9 @@ export default function App() {
                     −
                   </button>
                 </td>
-
+                <td style={{ ...cellStyle, width: NUMBER_COLUMN_WIDTH, textAlign: "center", fontWeight: "bold" }}>
+                  {rowIdx + 1}
+                </td>
                 {row.map((cell: string, colIdx: number) => {
                   const cellKey: EditingCell = { table: "right", tableId: t.id, row: rowIdx, col: colIdx };
                   const isEditing = editing?.table === "right" && editing.tableId === t.id && editing.row === rowIdx && editing.col === colIdx;
@@ -641,6 +676,7 @@ export default function App() {
                   +
                 </button>
               </td>
+              <td style={{ ...cellStyle, width: NUMBER_COLUMN_WIDTH }}></td>
               {t.columns.map((_, i) => <td key={i} style={{ border: "none" }} />)}
             </tr>
           </tbody>
