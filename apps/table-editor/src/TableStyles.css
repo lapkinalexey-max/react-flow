@@ -1,0 +1,81 @@
+/* TableStyles.css — стили только для таблиц в редакторе */
+
+table {
+  border-collapse: collapse;
+  background: #1a1a1a;
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  user-select: none;
+}
+
+th,
+td {
+  border: 1px solid #444;
+  padding: 8px 12px;
+  text-align: left;
+  position: relative;
+  box-sizing: border-box;
+}
+
+th {
+  background: #222;
+  font-weight: bold;
+  color: #ccc;
+  height: 36px;
+}
+
+td {
+  background: #111;
+  height: 40px;
+}
+
+/* Hover по строке */
+tr:hover td {
+  background: #252525;
+}
+
+/* Столбец действий (первый столбец с кнопками) */
+td:first-child,
+th:first-child {
+  width: 60px;
+  text-align: center;
+  padding: 4px;
+}
+
+/* Единые кнопки + и − */
+button {
+  width: 36px;
+  height: 36px;
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: inherit;
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: background 0.2s;
+}
+
+button:hover {
+  background: #2a2a2a;
+}
+
+/* Цвета для разных кнопок */
+button.add-row {
+  color: #0f8; /* зелёный плюс */
+}
+
+button.delete-row {
+  color: #f66; /* красный минус */
+}
+
+/* Выделенная ячейка (синяя рамка) */
+td.selected {
+  outline: 2px solid #0af;
+  outline-offset: -2px;
+}
