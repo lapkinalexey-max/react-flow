@@ -1,6 +1,10 @@
 import { useRef, useState, useEffect } from "react";
 import schema from "./schema.json";
 import './TableStyles.css';
+import PdfLoader from "./components/PdfLoader";
+import LeftSidebar from "./components/LeftSidebar";
+
+
 
 type Pos = { x: number; y: number };
 type DragState = { id: string; offsetX: number; offsetY: number } | null;
@@ -387,233 +391,130 @@ export default function App() {
   };
 
   return (
-    <div
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onClick={() => setContextMenu(null)}
-      onContextMenu={e => linking && (e.preventDefault(), e.stopPropagation(), setLinking(null))}
-      style={{ position: "relative", minWidth: "100vw", minHeight: "100vh", background: "#111", color: "#fff", fontFamily: "Arial, sans-serif" }}
-    >
-      <svg width={svgSize.width} height={svgSize.height} style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none" }}>
-        {connections.map((conn, i) => {
-          let start = null, end = null;
+    <>
+    <LeftSidebar />
+      <div
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onClick={() => setContextMenu(null)}
+        onContextMenu={e => linking && (e.preventDefault(), e.stopPropagation(), setLinking(null))}
+        style={{ position: "relative", minWidth: "100vw", minHeight: "100vh", background: "#111", color: "#fff", fontFamily: "Arial, sans-serif", paddingLeft: 320 }}
+      >
+        <svg width={svgSize.width} height={svgSize.height} style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none" }}>
+          {connections.map((conn, i) => {
+            let start = null, end = null;
 
-          if (conn.fromRow !== undefined && conn.toTable !== undefined) {
-            start = rowRight(conn.fromRow);
-            end = tableLeftPort(conn.toTable);
-          } else if (conn.fromTable !== undefined && conn.toRow !== undefined) {
-            start = tableLeftPort(conn.fromTable);
-            end = rowRight(conn.toRow);
-          }
+            if (conn.fromRow !== undefined && conn.toTable !== undefined) {
+              start = rowRight(conn.fromRow);
+              end = tableLeftPort(conn.toTable);
+            } else if (conn.fromTable !== undefined && conn.toRow !== undefined) {
+              start = tableLeftPort(conn.fromTable);
+              end = rowRight(conn.toRow);
+            }
 
-          if (!start || !end) return null;
+            if (!start || !end) return null;
 
-          const dx = Math.abs(end.x - start.x) * 0.5;
-          const dirX = end.x > start.x ? 1 : -1;
-          const d = `M ${start.x} ${start.y} C ${start.x + dirX * dx} ${start.y}, ${end.x - dirX * dx} ${end.y}, ${end.x} ${end.y}`;
+            const dx = Math.abs(end.x - start.x) * 0.5;
+            const dirX = end.x > start.x ? 1 : -1;
+            const d = `M ${start.x} ${start.y} C ${start.x + dirX * dx} ${start.y}, ${end.x - dirX * dx} ${end.y}, ${end.x} ${end.y}`;
 
-          return (
-            <g key={i} style={{ pointerEvents: "stroke" }}>
-              <path d={d} fill="none" stroke="transparent" strokeWidth={16}
-                onContextMenu={e => (e.preventDefault(), e.stopPropagation(), setContextMenu({ x: e.clientX, y: e.clientY, connectionIndex: i }))} />
-              <path d={d} fill="none" stroke="#ff4444" strokeWidth={3} pointerEvents="none" />
-            </g>
-          );
-        })}
+            return (
+              <g key={i} style={{ pointerEvents: "stroke" }}>
+                <path d={d} fill="none" stroke="transparent" strokeWidth={16}
+                  onContextMenu={e => (e.preventDefault(), e.stopPropagation(), setContextMenu({ x: e.clientX, y: e.clientY, connectionIndex: i }))} />
+                <path d={d} fill="none" stroke="#ff4444" strokeWidth={3} pointerEvents="none" />
+              </g>
+            );
+          })}
 
-        {linking && (() => {
-          const startPoint = linking.source === "leftRow"
-            ? rowRight(linking.sourceId as number)
-            : tableLeftPort(linking.sourceId as string);
+          {linking && (() => {
+            const startPoint = linking.source === "leftRow"
+              ? rowRight(linking.sourceId as number)
+              : tableLeftPort(linking.sourceId as string);
 
-          if (!startPoint) return null;
+            if (!startPoint) return null;
 
-          const endX = linking.currentX;
-          const endY = linking.currentY;
+            const endX = linking.currentX;
+            const endY = linking.currentY;
 
-          const dx = Math.abs(endX - startPoint.x) * 0.5;
-          const dirX = endX > startPoint.x ? 1 : -1;
-          const d = `M ${startPoint.x} ${startPoint.y} C ${startPoint.x + dirX * dx} ${startPoint.y}, ${endX - dirX * dx} ${endY}, ${endX} ${endY}`;
+            const dx = Math.abs(endX - startPoint.x) * 0.5;
+            const dirX = endX > startPoint.x ? 1 : -1;
+            const d = `M ${startPoint.x} ${startPoint.y} C ${startPoint.x + dirX * dx} ${startPoint.y}, ${endX - dirX * dx} ${endY}, ${endX} ${endY}`;
 
-          return <path d={d} fill="none" stroke="#ff6666" strokeWidth={3} strokeDasharray="8 5" pointerEvents="none" />;
-        })()}
-      </svg>
+            return <path d={d} fill="none" stroke="#ff6666" strokeWidth={3} strokeDasharray="8 5" pointerEvents="none" />;
+          })()}
+        </svg>
 
-      {contextMenu && (
-        <div style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, background: "#222", border: "1px solid #444", padding: "4px 0", zIndex: 1000, fontSize: 13 }}
-          onClick={e => e.stopPropagation()}>
-          <div style={{ padding: "6px 16px", cursor: "pointer" }} onClick={() => deleteConnection(contextMenu.connectionIndex)}>
-            🗑 Удалить связь
-          </div>
-        </div>
-      )}
-
-      {deleteConfirm && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000 }} onClick={() => setDeleteConfirm(null)}>
-          <div style={{ background: "#222", padding: "24px", borderRadius: "12px", border: "1px solid #555", minWidth: 300, textAlign: "center" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 16px 0" }}>Удалить строку?</h3>
-            <p style={{ margin: "0 0 24px 0", color: "#ccc" }}>В строке есть данные. Удалить безвозвратно?</p>
-            <div style={{ display: "flex", gap: "16px", justifyContent: "center", marginTop: "8px" }}>
-              <button
-                onClick={() => performDeleteRow(deleteConfirm.tableKey, deleteConfirm.rowIndex)}
-                style={{
-                  padding: "10px 24px",
-                  background: "#c33",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  minWidth: "120px",
-                }}
-              >
-                Да, удалить
-              </button>
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                style={{
-                  padding: "10px 24px",
-                  background: "#333",
-                  color: "#fff",
-                  border: "1px solid #555",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  minWidth: "100px",
-                }}
-              >
-                Отмена
-              </button>
+        {contextMenu && (
+          <div style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, background: "#222", border: "1px solid #444", padding: "4px 0", zIndex: 1000, fontSize: 13 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ padding: "6px 16px", cursor: "pointer" }} onClick={() => deleteConnection(contextMenu.connectionIndex)}>
+              🗑 Удалить связь
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Левая таблица с нумерацией строк */}
-      <table border={1} onMouseDown={e => onMouseDownDrag(e, "left", positions.left)}
-        style={{ position: "absolute", left: positions.left.x, top: positions.left.y, borderCollapse: "collapse", background: "#111", cursor: "move", userSelect: "none" }}>
-        <thead>
-          <tr>
-            <th colSpan={data.leftTable.columns.length + 2} style={headerCellStyle}>{data.leftTable.title}</th>
-          </tr>
-          <tr>
-            <th style={{ ...headerCellStyle, width: ACTION_COLUMN_WIDTH }}></th>
-            <th style={{ ...headerCellStyle, width: NUMBER_COLUMN_WIDTH, textAlign: "center" }}>№</th>
-            {data.leftTable.columns.map((colName: string, colIdx: number) => (
-              <th key={colIdx} style={{ ...headerCellStyle, width: columnWidths.left[colIdx] }}>
-                {colName}
-                <div
-                  style={{ position: "absolute", right: 0, top: 0, width: 5, height: "100%", cursor: "col-resize", background: "transparent" }}
-                  onMouseDown={e => {
-                    e.stopPropagation();
-                    resizeDrag.current = { tableKey: "left", colIndex: colIdx, startX: e.clientX, startWidth: columnWidths.left[colIdx] };
-                  }}
-                />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.leftTable.rows.map((row: string[], rowIdx: number) => (
-            <tr key={rowIdx} ref={el => (leftRowRefs.current[rowIdx] = el)} style={{ height: ROW_HEIGHT }}>
-              <td style={{ ...cellStyle, width: ACTION_COLUMN_WIDTH, padding: "4px", textAlign: "center" }}>
+        {deleteConfirm && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000 }} onClick={() => setDeleteConfirm(null)}>
+            <div style={{ background: "#222", padding: "24px", borderRadius: "12px", border: "1px solid #555", minWidth: 300, textAlign: "center" }} onClick={e => e.stopPropagation()}>
+              <h3 style={{ margin: "0 0 16px 0" }}>Удалить строку?</h3>
+              <p style={{ margin: "0 0 24px 0", color: "#ccc" }}>В строке есть данные. Удалить безвозвратно?</p>
+              <div style={{ display: "flex", gap: "16px", justifyContent: "center", marginTop: "8px" }}>
                 <button
-                  className="delete-row"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    requestDeleteRow("left", rowIdx);
+                  onClick={() => performDeleteRow(deleteConfirm.tableKey, deleteConfirm.rowIndex)}
+                  style={{
+                    padding: "10px 24px",
+                    background: "#c33",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    minWidth: "120px",
                   }}
-                  style={actionButtonStyle}
-                  onMouseOver={e => e.currentTarget.style.background = "#2a2a2a"}
-                  onMouseOut={e => e.currentTarget.style.background = "#1e1e1e"}
                 >
-                  −
+                  Да, удалить
                 </button>
-              </td>
-              <td style={{ ...cellStyle, width: NUMBER_COLUMN_WIDTH, textAlign: "center", fontWeight: "bold" }}>
-                {rowIdx + 1}
-              </td>
-              {row.map((cell: string, colIdx: number) => {
-                const cellKey: EditingCell = { table: "left", row: rowIdx, col: colIdx };
-                const isEditing = editing?.table === "left" && editing.row === rowIdx && editing.col === colIdx;
-                return (
-                  <td
-                    key={colIdx}
-                    className={isSelected(cellKey) ? "selected" : ""}
-                    style={{ ...cellStyle, width: columnWidths.left[colIdx] }}
-                    onClick={() => setSelectedCell(cellKey)}
-                    onDoubleClick={e => startEdit(cellKey, e)}
-                  >
-                    {isEditing ? (
-                      <input ref={inputRef} type="text" defaultValue={cell}
-                        style={{ background: "#333", color: "#fff", border: "1px solid #555", padding: "2px 4px", width: "100%", height: "100%" }}
-                        onBlur={e => saveEdit(e.target.value)}
-                        onKeyDown={e => { if (e.key === "Escape") setEditing(null); }}
-                      />
-                    ) : (
-                      <>
-                        {cell}
-                        {colIdx === row.length - 1 && (
-                          <span data-port="out"
-                            onMouseDown={e => startLinking("leftRow", rowIdx, e)}
-                            onMouseUp={e => finishLinking("leftRow", rowIdx, e)}
-                            style={{ position: "absolute", right: -6, top: "50%", width: 10, height: 10, borderRadius: "50%", background: "red", transform: "translateY(-50%)", cursor: "crosshair" }}
-                          />
-                        )}
-                      </>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  style={{
+                    padding: "10px 24px",
+                    background: "#333",
+                    color: "#fff",
+                    border: "1px solid #555",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    minWidth: "100px",
+                  }}
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-          <tr style={{ height: ROW_HEIGHT }}>
-            <td style={{ ...cellStyle, width: ACTION_COLUMN_WIDTH, padding: "4px", textAlign: "center" }}>
-              <button
-                className="add-row"
-                onClick={() => addRow("left")}
-                style={actionButtonStyle}
-                onMouseOver={e => e.currentTarget.style.background = "#2a2a2a"}
-                onMouseOut={e => e.currentTarget.style.background = "#1e1e1e"}
-              >
-                +
-              </button>
-            </td>
-            <td style={{ ...cellStyle, width: NUMBER_COLUMN_WIDTH }}></td>
-            {data.leftTable.columns.map((_, i) => <td key={i} style={{ border: "none" }} />)}
-          </tr>
-        </tbody>
-      </table>
-
-      {/* Правые таблицы с нумерацией строк */}
-      {data.rightTables.map((t: any) => (
-        <table key={t.id} border={1} onMouseDown={e => onMouseDownDrag(e, t.id, positions[t.id])}
-          style={{ position: "absolute", left: positions[t.id].x, top: positions[t.id].y, borderCollapse: "collapse", background: "#111", cursor: "move", userSelect: "none" }}>
+        {/* Левая таблица с нумерацией строк */}
+        <table border={1} onMouseDown={e => onMouseDownDrag(e, "left", positions.left)}
+          style={{ position: "absolute", left: positions.left.x, top: positions.left.y, borderCollapse: "collapse", background: "#111", cursor: "move", userSelect: "none" }}>
           <thead>
             <tr>
-              <th colSpan={t.columns.length + 2} style={headerCellStyle}>
-                {t.title}
-                <span data-port="in" ref={el => (rightPortRefs.current[t.id] = el)}
-                  onMouseDown={e => startLinking("rightTable", t.id, e)}
-                  onMouseUp={e => finishLinking("rightTable", t.id, e)}
-                  style={{ position: "absolute", left: -6, top: "50%", width: 10, height: 10, borderRadius: "50%", background: "red", transform: "translateY(-50%)", cursor: "crosshair" }}
-                />
-              </th>
+              <th colSpan={data.leftTable.columns.length + 2} style={headerCellStyle}>{data.leftTable.title}</th>
             </tr>
             <tr>
               <th style={{ ...headerCellStyle, width: ACTION_COLUMN_WIDTH }}></th>
               <th style={{ ...headerCellStyle, width: NUMBER_COLUMN_WIDTH, textAlign: "center" }}>№</th>
-              {t.columns.map((colName: string, colIdx: number) => (
-                <th key={colIdx} style={{ ...headerCellStyle, width: columnWidths[t.id][colIdx] }}>
+              {data.leftTable.columns.map((colName: string, colIdx: number) => (
+                <th key={colIdx} style={{ ...headerCellStyle, width: columnWidths.left[colIdx] }}>
                   {colName}
                   <div
                     style={{ position: "absolute", right: 0, top: 0, width: 5, height: "100%", cursor: "col-resize", background: "transparent" }}
                     onMouseDown={e => {
                       e.stopPropagation();
-                      resizeDrag.current = { tableKey: t.id, colIndex: colIdx, startX: e.clientX, startWidth: columnWidths[t.id][colIdx] };
+                      resizeDrag.current = { tableKey: "left", colIndex: colIdx, startX: e.clientX, startWidth: columnWidths.left[colIdx] };
                     }}
                   />
                 </th>
@@ -621,14 +522,14 @@ export default function App() {
             </tr>
           </thead>
           <tbody>
-            {t.rows.map((row: string[], rowIdx: number) => (
-              <tr key={rowIdx} style={{ height: ROW_HEIGHT }}>
+            {data.leftTable.rows.map((row: string[], rowIdx: number) => (
+              <tr key={rowIdx} ref={el => (leftRowRefs.current[rowIdx] = el)} style={{ height: ROW_HEIGHT }}>
                 <td style={{ ...cellStyle, width: ACTION_COLUMN_WIDTH, padding: "4px", textAlign: "center" }}>
                   <button
                     className="delete-row"
                     onClick={(e) => {
                       e.stopPropagation();
-                      requestDeleteRow(t.id, rowIdx);
+                      requestDeleteRow("left", rowIdx);
                     }}
                     style={actionButtonStyle}
                     onMouseOver={e => e.currentTarget.style.background = "#2a2a2a"}
@@ -641,13 +542,13 @@ export default function App() {
                   {rowIdx + 1}
                 </td>
                 {row.map((cell: string, colIdx: number) => {
-                  const cellKey: EditingCell = { table: "right", tableId: t.id, row: rowIdx, col: colIdx };
-                  const isEditing = editing?.table === "right" && editing.tableId === t.id && editing.row === rowIdx && editing.col === colIdx;
+                  const cellKey: EditingCell = { table: "left", row: rowIdx, col: colIdx };
+                  const isEditing = editing?.table === "left" && editing.row === rowIdx && editing.col === colIdx;
                   return (
                     <td
                       key={colIdx}
                       className={isSelected(cellKey) ? "selected" : ""}
-                      style={{ ...cellStyle, width: columnWidths[t.id][colIdx] }}
+                      style={{ ...cellStyle, width: columnWidths.left[colIdx] }}
                       onClick={() => setSelectedCell(cellKey)}
                       onDoubleClick={e => startEdit(cellKey, e)}
                     >
@@ -657,7 +558,18 @@ export default function App() {
                           onBlur={e => saveEdit(e.target.value)}
                           onKeyDown={e => { if (e.key === "Escape") setEditing(null); }}
                         />
-                      ) : cell}
+                      ) : (
+                        <>
+                          {cell}
+                          {colIdx === row.length - 1 && (
+                            <span data-port="out"
+                              onMouseDown={e => startLinking("leftRow", rowIdx, e)}
+                              onMouseUp={e => finishLinking("leftRow", rowIdx, e)}
+                              style={{ position: "absolute", right: -6, top: "50%", width: 10, height: 10, borderRadius: "50%", background: "red", transform: "translateY(-50%)", cursor: "crosshair" }}
+                            />
+                          )}
+                        </>
+                      )}
                     </td>
                   );
                 })}
@@ -668,7 +580,7 @@ export default function App() {
               <td style={{ ...cellStyle, width: ACTION_COLUMN_WIDTH, padding: "4px", textAlign: "center" }}>
                 <button
                   className="add-row"
-                  onClick={() => addRow(t.id)}
+                  onClick={() => addRow("left")}
                   style={actionButtonStyle}
                   onMouseOver={e => e.currentTarget.style.background = "#2a2a2a"}
                   onMouseOut={e => e.currentTarget.style.background = "#1e1e1e"}
@@ -677,11 +589,106 @@ export default function App() {
                 </button>
               </td>
               <td style={{ ...cellStyle, width: NUMBER_COLUMN_WIDTH }}></td>
-              {t.columns.map((_, i) => <td key={i} style={{ border: "none" }} />)}
+              {data.leftTable.columns.map((_, i) => <td key={i} style={{ border: "none" }} />)}
             </tr>
           </tbody>
         </table>
-      ))}
-    </div>
+
+        {/* Правые таблицы с нумерацией строк */}
+        {data.rightTables.map((t: any) => (
+          <table key={t.id} border={1} onMouseDown={e => onMouseDownDrag(e, t.id, positions[t.id])}
+            style={{ position: "absolute", left: positions[t.id].x, top: positions[t.id].y, borderCollapse: "collapse", background: "#111", cursor: "move", userSelect: "none" }}>
+            <thead>
+              <tr>
+                <th colSpan={t.columns.length + 2} style={headerCellStyle}>
+                  {t.title}
+                  <span data-port="in" ref={el => (rightPortRefs.current[t.id] = el)}
+                    onMouseDown={e => startLinking("rightTable", t.id, e)}
+                    onMouseUp={e => finishLinking("rightTable", t.id, e)}
+                    style={{ position: "absolute", left: -6, top: "50%", width: 10, height: 10, borderRadius: "50%", background: "red", transform: "translateY(-50%)", cursor: "crosshair" }}
+                  />
+                </th>
+              </tr>
+              <tr>
+                <th style={{ ...headerCellStyle, width: ACTION_COLUMN_WIDTH }}></th>
+                <th style={{ ...headerCellStyle, width: NUMBER_COLUMN_WIDTH, textAlign: "center" }}>№</th>
+                {t.columns.map((colName: string, colIdx: number) => (
+                  <th key={colIdx} style={{ ...headerCellStyle, width: columnWidths[t.id][colIdx] }}>
+                    {colName}
+                    <div
+                      style={{ position: "absolute", right: 0, top: 0, width: 5, height: "100%", cursor: "col-resize", background: "transparent" }}
+                      onMouseDown={e => {
+                        e.stopPropagation();
+                        resizeDrag.current = { tableKey: t.id, colIndex: colIdx, startX: e.clientX, startWidth: columnWidths[t.id][colIdx] };
+                      }}
+                    />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {t.rows.map((row: string[], rowIdx: number) => (
+                <tr key={rowIdx} style={{ height: ROW_HEIGHT }}>
+                  <td style={{ ...cellStyle, width: ACTION_COLUMN_WIDTH, padding: "4px", textAlign: "center" }}>
+                    <button
+                      className="delete-row"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        requestDeleteRow(t.id, rowIdx);
+                      }}
+                      style={actionButtonStyle}
+                      onMouseOver={e => e.currentTarget.style.background = "#2a2a2a"}
+                      onMouseOut={e => e.currentTarget.style.background = "#1e1e1e"}
+                    >
+                      −
+                    </button>
+                  </td>
+                  <td style={{ ...cellStyle, width: NUMBER_COLUMN_WIDTH, textAlign: "center", fontWeight: "bold" }}>
+                    {rowIdx + 1}
+                  </td>
+                  {row.map((cell: string, colIdx: number) => {
+                    const cellKey: EditingCell = { table: "right", tableId: t.id, row: rowIdx, col: colIdx };
+                    const isEditing = editing?.table === "right" && editing.tableId === t.id && editing.row === rowIdx && editing.col === colIdx;
+                    return (
+                      <td
+                        key={colIdx}
+                        className={isSelected(cellKey) ? "selected" : ""}
+                        style={{ ...cellStyle, width: columnWidths[t.id][colIdx] }}
+                        onClick={() => setSelectedCell(cellKey)}
+                        onDoubleClick={e => startEdit(cellKey, e)}
+                      >
+                        {isEditing ? (
+                          <input ref={inputRef} type="text" defaultValue={cell}
+                            style={{ background: "#333", color: "#fff", border: "1px solid #555", padding: "2px 4px", width: "100%", height: "100%" }}
+                            onBlur={e => saveEdit(e.target.value)}
+                            onKeyDown={e => { if (e.key === "Escape") setEditing(null); }}
+                          />
+                        ) : cell}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+
+              <tr style={{ height: ROW_HEIGHT }}>
+                <td style={{ ...cellStyle, width: ACTION_COLUMN_WIDTH, padding: "4px", textAlign: "center" }}>
+                  <button
+                    className="add-row"
+                    onClick={() => addRow(t.id)}
+                    style={actionButtonStyle}
+                    onMouseOver={e => e.currentTarget.style.background = "#2a2a2a"}
+                    onMouseOut={e => e.currentTarget.style.background = "#1e1e1e"}
+                  >
+                    +
+                  </button>
+                </td>
+                <td style={{ ...cellStyle, width: NUMBER_COLUMN_WIDTH }}></td>
+                {t.columns.map((_, i) => <td key={i} style={{ border: "none" }} />)}
+              </tr>
+            </tbody>
+          </table>
+        ))}
+      </div>
+    </>
   );
 }
